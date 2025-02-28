@@ -4,6 +4,10 @@
 
 A Python tool to automatically create Anki flashcards from Turkish PDF documents by extracting words, translating them, and generating example sentences.
 
+<div align="center">
+  <img src="docs/images/treasure_map_flowchart.svg" alt="Turkish Study Assistant Treasure Map" width="700">
+</div>
+
 ## 🚀 Features
 
 - Extract Turkish vocabulary from PDF documents
@@ -70,6 +74,10 @@ The script supports graceful interruption and resuming:
 3. Run the script again with the same output directory to resume where you left off
 4. The script will automatically detect previous progress and ask if you want to resume
 
+<div align="center">
+  <img src="docs/images/state_persistence_map.svg" alt="Voyage Interruption & Resume Map" width="700">
+</div>
+
 ## 📚 Output
 
 The script generates:
@@ -78,11 +86,16 @@ The script generates:
 2. An Anki deck file (`.apkg`) that can be imported directly into Anki
 3. A JSON file with all translations and examples for reference
 
+<div align="center">
+  <img src="docs/images/anki_cards_chest.svg" alt="The Anki Treasure Chest" width="600">
+</div>
+
 The Anki cards include:
 - The Turkish word
 - The English translation
 - An example sentence in Turkish
 - The translation of the example sentence
+- A notes field for your own annotations
 
 ## 🧠 How It Works
 
