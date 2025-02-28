@@ -93,23 +93,60 @@ def clean_word(word: str) -> str:
     return word.strip().lower()
 
 def extract_turkish_words(pdf_path: str) -> Set[str]:
-    """Extract what appear to be Turkish words from a PDF."""
+    """
+    Extract what appear to be Turkish words from a PDF.
+    Uses a progress bar when rich library is available.
+    """
     doc = fitz.open(pdf_path)
     all_words = set()
+    total_pages = len(doc)
     
-    for page_num in range(len(doc)):
-        page = doc.load_page(page_num)
-        text = page.get_text()
-        
-        # Replace multiple spaces and newlines with a single space
-        text = re.sub(r'\s+', ' ', text)
-        
-        # Split text into words
-        words = text.split()
-        for word in words:
-            cleaned = clean_word(word)
-            if cleaned and is_turkish_word(cleaned):
-                all_words.add(cleaned)
+    if RICH_AVAILABLE and total_pages > 1:
+        with Progress(
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            TimeRemainingColumn(),
+            console=console
+        ) as progress:
+            page_task = progress.add_task(f"[cyan]Reading PDF: {os.path.basename(pdf_path)}[/cyan]", total=total_pages)
+            
+            for page_num in range(total_pages):
+                progress.update(page_task, description=f"[cyan]Reading page {page_num+1}/{total_pages}[/cyan]")
+                
+                page = doc.load_page(page_num)
+                text = page.get_text()
+                
+                # Replace multiple spaces and newlines with a single space
+                text = re.sub(r'\s+', ' ', text)
+                
+                # Split text into words
+                words = text.split()
+                turkish_words_on_page = 0
+                
+                for word in words:
+                    cleaned = clean_word(word)
+                    if cleaned and is_turkish_word(cleaned):
+                        all_words.add(cleaned)
+                        turkish_words_on_page += 1
+                
+                progress.update(page_task, advance=1)
+                if turkish_words_on_page > 0:
+                    progress.print(f"Found {turkish_words_on_page} Turkish words on page {page_num+1}")
+    else:
+        for page_num in range(total_pages):
+            page = doc.load_page(page_num)
+            text = page.get_text()
+            
+            # Replace multiple spaces and newlines with a single space
+            text = re.sub(r'\s+', ' ', text)
+            
+            # Split text into words
+            words = text.split()
+            for word in words:
+                cleaned = clean_word(word)
+                if cleaned and is_turkish_word(cleaned):
+                    all_words.add(cleaned)
     
     doc.close()
     return all_words
@@ -338,6 +375,11 @@ Here are the words:
 
 def create_anki_deck(translations: Dict[str, Dict], output_dir: str, deck_name: str = "Turkish Vocabulary"):
     """Create Anki cards from the translations."""
+    if RICH_AVAILABLE:
+        console.print(f"[blue]Creating Anki deck with {len(translations)} cards...[/blue]")
+    else:
+        logger.info(f"Creating Anki deck with {len(translations)} cards...")
+    
     # Define the model (card template)
     model = genanki.Model(
         MODEL_ID,
@@ -347,17 +389,48 @@ def create_anki_deck(translations: Dict[str, Dict], output_dir: str, deck_name: 
             {'name': 'English'},
             {'name': 'Example'},
             {'name': 'ExampleTranslation'},
+            {'name': 'Notes'},
         ],
         templates=[
             {
                 'name': 'Turkish to English',
-                'qfmt': '<h1>{{Turkish}}</h1>',
-                'afmt': '<h1>{{Turkish}}</h1><hr id="answer"><h2>{{English}}</h2><p><i>{{Example}}</i><br>{{ExampleTranslation}}</p>',
+                'qfmt': '''
+<div style="font-family: Arial; font-size: 20px; text-align: center; color: #2c3e50;">
+  <h1 style="color: #e74c3c;">{{Turkish}}</h1>
+</div>
+''',
+                'afmt': '''
+<div style="font-family: Arial; font-size: 20px; text-align: center; color: #2c3e50;">
+  <h1 style="color: #e74c3c;">{{Turkish}}</h1>
+  <hr id="answer">
+  <h2 style="color: #3498db;">{{English}}</h2>
+  <div style="text-align: left; font-size: 18px; margin-top: 20px;">
+    <p style="font-style: italic; color: #7f8c8d;">{{Example}}</p>
+    <p>{{ExampleTranslation}}</p>
+    <p style="font-size: 14px; color: #95a5a6;">{{Notes}}</p>
+  </div>
+</div>
+''',
             },
             {
                 'name': 'English to Turkish',
-                'qfmt': '<h1>{{English}}</h1>',
-                'afmt': '<h1>{{English}}</h1><hr id="answer"><h2>{{Turkish}}</h2><p><i>{{Example}}</i><br>{{ExampleTranslation}}</p>',
+                'qfmt': '''
+<div style="font-family: Arial; font-size: 20px; text-align: center; color: #2c3e50;">
+  <h1 style="color: #3498db;">{{English}}</h1>
+</div>
+''',
+                'afmt': '''
+<div style="font-family: Arial; font-size: 20px; text-align: center; color: #2c3e50;">
+  <h1 style="color: #3498db;">{{English}}</h1>
+  <hr id="answer">
+  <h2 style="color: #e74c3c;">{{Turkish}}</h2>
+  <div style="text-align: left; font-size: 18px; margin-top: 20px;">
+    <p style="font-style: italic; color: #7f8c8d;">{{Example}}</p>
+    <p>{{ExampleTranslation}}</p>
+    <p style="font-size: 14px; color: #95a5a6;">{{Notes}}</p>
+  </div>
+</div>
+''',
             },
         ]
     )
@@ -366,33 +439,89 @@ def create_anki_deck(translations: Dict[str, Dict], output_dir: str, deck_name: 
     deck = genanki.Deck(DECK_ID, deck_name)
     
     # Add notes (cards) to the deck
-    for turkish_word, data in translations.items():
-        note = genanki.Note(
-            model=model,
-            fields=[
-                turkish_word,
-                data.get('english', ''),
-                data.get('example', ''),
-                data.get('example_translation', '')
-            ]
-        )
-        deck.add_note(note)
+    cards_added = 0
+    
+    # Use progress bar when rich is available
+    if RICH_AVAILABLE and translations:
+        with Progress(
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            console=console
+        ) as progress:
+            task = progress.add_task("[cyan]Creating flashcards...[/cyan]", total=len(translations))
+            
+            for turkish_word, data in translations.items():
+                # Skip words that don't have proper translations
+                if not data.get('english') or not data.get('example'):
+                    progress.print(f"[yellow]Skipping incomplete card for: {turkish_word}[/yellow]")
+                    continue
+                
+                note = genanki.Note(
+                    model=model,
+                    fields=[
+                        turkish_word,
+                        data.get('english', ''),
+                        data.get('example', ''),
+                        data.get('example_translation', ''),
+                        ''  # Empty notes field for user to fill in
+                    ]
+                )
+                deck.add_note(note)
+                cards_added += 1
+                
+                # Show occasional preview
+                if cards_added % 100 == 0:
+                    progress.print(f"[green]Added {cards_added} cards so far[/green]")
+                
+                progress.update(task, advance=1)
+    else:
+        for turkish_word, data in translations.items():
+            # Skip words that don't have proper translations
+            if not data.get('english') or not data.get('example'):
+                logger.warning(f"Skipping incomplete card for: {turkish_word}")
+                continue
+                
+            note = genanki.Note(
+                model=model,
+                fields=[
+                    turkish_word,
+                    data.get('english', ''),
+                    data.get('example', ''),
+                    data.get('example_translation', ''),
+                    ''  # Empty notes field for user to fill in
+                ]
+            )
+            deck.add_note(note)
+            cards_added += 1
     
     # Create output directory if it doesn't exist
     anki_dir = os.path.join(output_dir, 'anki')
     os.makedirs(anki_dir, exist_ok=True)
     
+    # Get timestamp for unique filenames
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
     # Save the deck
-    deck_path = os.path.join(anki_dir, f"{deck_name.replace(' ', '_')}.apkg")
+    deck_filename = f"{deck_name.replace(' ', '_')}_{timestamp}"
+    deck_path = os.path.join(anki_dir, f"{deck_filename}.apkg")
+    
+    if RICH_AVAILABLE:
+        console.print(f"[green]Writing Anki deck to {deck_path}[/green]")
+    
     genanki.Package(deck).write_to_file(deck_path)
     
     # Also save as JSON for easier inspection
-    json_path = os.path.join(anki_dir, f"{deck_name.replace(' ', '_')}.json")
+    json_path = os.path.join(anki_dir, f"{deck_filename}.json")
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(translations, f, ensure_ascii=False, indent=2)
     
-    logger.info(f"Created Anki deck with {len(translations)} cards at {deck_path}")
-    logger.info(f"Saved translations as JSON at {json_path}")
+    if RICH_AVAILABLE:
+        console.print(f"[green]Created Anki deck with {cards_added} cards at {deck_path}[/green]")
+        console.print(f"[green]Saved translations as JSON at {json_path}[/green]")
+    else:
+        logger.info(f"Created Anki deck with {cards_added} cards at {deck_path}")
+        logger.info(f"Saved translations as JSON at {json_path}")
     
     return deck_path
 
