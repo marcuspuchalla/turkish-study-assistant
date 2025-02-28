@@ -47,7 +47,28 @@ pip install pymupdf anthropic genanki
 # You can also set the API key as an environment variable
 export ANTHROPIC_API_KEY=YOUR_API_KEY
 ./turkish_anki_generator.py path/to/pdf_directory/
+
+# Customize the batch size for translations (default: 20)
+./turkish_anki_generator.py path/to/pdf_directory/ --batch-size 30
+
+# Start fresh and ignore previous progress
+./turkish_anki_generator.py path/to/pdf_directory/ --no-resume
+
+# Force removal of previous state file
+./turkish_anki_generator.py path/to/pdf_directory/ --clean
+
+# Enable debug logging
+./turkish_anki_generator.py path/to/pdf_directory/ --debug
 ```
+
+### 🛑 Interrupting and Resuming
+
+The script supports graceful interruption and resuming:
+
+1. Press `Ctrl+C` at any time to pause processing
+2. The current state will be automatically saved
+3. Run the script again with the same output directory to resume where you left off
+4. The script will automatically detect previous progress and ask if you want to resume
 
 ## 📚 Output
 
@@ -70,6 +91,32 @@ The Anki cards include:
 2. **Translation**: Using Claude AI, the script translates each Turkish word to English and generates contextual example sentences.
 
 3. **Card Generation**: The script creates Anki flashcards with both the translations and examples, formatted for effective learning.
+
+## 🌟 Features in Detail
+
+### Interactive Progress UI
+- Real-time progress bars for all operations
+- Detailed status updates during processing
+- Sample translations displayed during processing
+- Color-coded output for better readability
+
+### State Persistence
+- Automatic state saving after each batch of words
+- Graceful handling of interruptions (Ctrl+C)
+- Resume capability for long-running jobs
+- Option to force a fresh start when needed
+
+### Customization
+- Configurable batch sizes for translation
+- Timestamped output files to prevent overwrites
+- Debug mode for troubleshooting
+- Support for multiple input methods (file, directory, list)
+
+### Anki Integration
+- Beautifully styled flashcards
+- Bidirectional learning (Turkish→English and English→Turkish)
+- Notes field for personal annotations
+- JSON export for backup and further processing
 
 ## 📄 License
 
