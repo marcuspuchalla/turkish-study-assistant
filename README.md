@@ -38,31 +38,49 @@ pip install pymupdf anthropic genanki
 
 ## 🔧 Usage
 
+### Processing PDFs and Creating Collections
+
 ```bash
 # Process a single PDF file
-./turkish_anki_generator.py path/to/turkish_document.pdf --api-key YOUR_API_KEY
+./turkish_anki_generator.py process path/to/turkish_document.pdf --api-key YOUR_API_KEY
 
-# Process a directory of PDFs
-./turkish_anki_generator.py path/to/pdf_directory/ --api-key YOUR_API_KEY
+# Process a directory of PDFs into a named collection
+./turkish_anki_generator.py process path/to/pdf_directory/ --collection turkish_a1 --api-key YOUR_API_KEY
 
-# Specify a custom output directory
-./turkish_anki_generator.py path/to/pdf_directory/ --output path/to/output_dir --api-key YOUR_API_KEY
+# Add a description to your collection
+./turkish_anki_generator.py process path/to/pdf_directory/ --collection turkish_a1 --description "A1 Level Turkish Vocabulary" --api-key YOUR_API_KEY
 
-# You can also set the API key as an environment variable
+# Add new PDFs to an existing collection
+./turkish_anki_generator.py process path/to/new_pdf.pdf --collection turkish_a1 --api-key YOUR_API_KEY
+
+# Exclude words that are already in an existing Anki deck
+./turkish_anki_generator.py process path/to/intermediate_pdfs/ --collection turkish_a2 --exclude-from output/turkish_a1/anki/Turkish_Vocabulary_*.apkg --api-key YOUR_API_KEY
+
+# Set the API key as an environment variable instead
 export ANTHROPIC_API_KEY=YOUR_API_KEY
-./turkish_anki_generator.py path/to/pdf_directory/
+./turkish_anki_generator.py process path/to/pdf_directory/ --collection turkish_a1
 
 # Customize the batch size for translations (default: 20)
-./turkish_anki_generator.py path/to/pdf_directory/ --batch-size 30
+./turkish_anki_generator.py process path/to/pdf_directory/ --collection turkish_a1 --batch-size 30
 
 # Start fresh and ignore previous progress
-./turkish_anki_generator.py path/to/pdf_directory/ --no-resume
+./turkish_anki_generator.py process path/to/pdf_directory/ --collection turkish_a1 --no-resume
 
 # Force removal of previous state file
-./turkish_anki_generator.py path/to/pdf_directory/ --clean
+./turkish_anki_generator.py process path/to/pdf_directory/ --collection turkish_a1 --clean
 
 # Enable debug logging
-./turkish_anki_generator.py path/to/pdf_directory/ --debug
+./turkish_anki_generator.py process path/to/pdf_directory/ --collection turkish_a1 --debug
+```
+
+### Managing Collections
+
+```bash
+# List all available collections
+./turkish_anki_generator.py list
+
+# View PDFs in a specific collection
+./turkish_anki_generator.py pdfs turkish_a1
 ```
 
 ### 🛑 Interrupting and Resuming
@@ -106,6 +124,13 @@ The Anki cards include:
 3. **Card Generation**: The script creates Anki flashcards with both the translations and examples, formatted for effective learning.
 
 ## 🌟 Features in Detail
+
+### Collection Management
+- Create named collections for different Turkish levels (A1, A2, B1, etc.)
+- Add new PDFs to existing collections incrementally
+- Exclude words already learned in previous collections
+- Track statistics for each collection (word count, PDF count)
+- List and manage your collections through the CLI
 
 ### Interactive Progress UI
 - Real-time progress bars for all operations
